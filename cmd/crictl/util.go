@@ -35,6 +35,7 @@ import (
 	"google.golang.org/grpc"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	"k8s.io/cri-api/pkg/apis/runtime/experimental"
 	"sigs.k8s.io/yaml"
 )
 
@@ -149,6 +150,16 @@ func openFile(path string) (*os.File, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+func getExperimentalRuntimeClient(context *cli.Context) (experimental.RuntimeServiceClient, *grpc.ClientConn, error) {
+	// Set up a connection to the server.
+	conn, err := getRuntimeClientConnection(context)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "connect")
+	}
+	runtimeClient := experimental.NewRuntimeServiceClient(conn)
+	return runtimeClient, conn, nil
 }
 
 func getRuntimeClient(context *cli.Context) (pb.RuntimeServiceClient, *grpc.ClientConn, error) {

@@ -32,6 +32,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	"k8s.io/cri-api/pkg/apis/runtime/experimental"
 )
 
 type containerByCreated []*pb.Container
@@ -591,6 +592,95 @@ var runContainerCommand = &cli.Command{
 	},
 }
 
+var checkpointContainerCommand = &cli.Command{
+	Name:                   "checkpoint",
+	Usage:                  "Checkpoint one or more running containers",
+	ArgsUsage:              "CONTAINER-ID [CONTAINER-ID...]",
+	UseShortOptionHandling: true,
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:    "export",
+			Aliases: []string{"e"},
+			Usage:   "Specify the name of the tar archive used to export the checkpoint image.",
+		},
+		&cli.BoolFlag{
+			Name:  "keep",
+			Aliases: []string{"k"},
+			Usage: "Keep all temporary checkpoint files.",
+		},
+		&cli.BoolFlag{
+			Name:  "leave-running",
+			Aliases: []string{"R"},
+			Usage: "Leave the container running after writing checkpoint to disk.",
+		},
+	},
+	Action: func(context *cli.Context) error {
+		if context.NArg() == 0 {
+			return cli.ShowSubcommandHelp(context)
+		}
+		runtimeClient, runtimeConn, err := getExperimentalRuntimeClient(context)
+		if err != nil {
+			return err
+		}
+		defer closeConnection(context, runtimeConn)
+
+		for i := 0; i < context.NArg(); i++ {
+			containerID := context.Args().Get(i)
+			err := CheckpointContainer(runtimeClient, containerID, context.String("export"), context.Bool("keep"), context.Bool("leave-running"))
+			if err != nil {
+				return fmt.Errorf("Checkpointing the container %q failed: %v", containerID, err)
+			}
+		}
+		return nil
+	},
+}
+
+var restoreContainerCommand = &cli.Command{
+	Name:                   "restore",
+	Usage:                  "Restore one or more checkpointed containers",
+	ArgsUsage:              "CONTAINER-ID [CONTAINER-ID...]",
+	UseShortOptionHandling: true,
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:    "pod",
+			Aliases: []string{"p"},
+			Value:   "",
+			Usage:   "Specify POD into which the container will be restored. Defaults to previous POD.",
+		},
+		&cli.StringFlag{
+			Name:    "import",
+			Aliases: []string{"i"},
+			Usage:   "Specify the name of the checkpoint archive used to restore the container/POD",
+		},
+	},
+	Action: func(context *cli.Context) error {
+		if context.NArg() == 0 && context.String("pod") == "" && context.String("import") == "" {
+			return cli.ShowSubcommandHelp(context)
+		}
+		runtimeClient, runtimeConn, err := getExperimentalRuntimeClient(context)
+		if err != nil {
+			return err
+		}
+		defer closeConnection(context, runtimeConn)
+
+		for i := 0; i < context.NArg(); i++ {
+			containerID := context.Args().Get(i)
+			err := RestoreContainer(runtimeClient, containerID, context.String("pod"), "")
+			if err != nil {
+				return fmt.Errorf("Restoring the container %q failed: %v", containerID, err)
+			}
+		}
+		if context.String("import") != "" {
+			err := RestoreContainer(runtimeClient, "", context.String("pod"), context.String("import"))
+			if err != nil {
+				return fmt.Errorf("Restoring the container from %s failed: %v", context.String("import"), err)
+			}
+		}
+
+		return nil
+	},
+}
+
 // RunContainer starts a container in the provided sandbox
 func RunContainer(
 	iClient pb.ImageServiceClient,
@@ -760,6 +850,55 @@ func StopContainer(client pb.RuntimeServiceClient, ID string, timeout int64) err
 		return err
 	}
 	fmt.Println(ID)
+	return nil
+}
+
+// CheckpointContainer sends a CheckpointContainerRequest to the server
+func CheckpointContainer(client experimental.RuntimeServiceClient, ID, export string, keep, leaveRunning bool) error {
+	if ID == "" {
+		return fmt.Errorf("ID cannot be empty")
+	}
+	request := &experimental.CheckpointContainerRequest{
+		Id: ID,
+		Options: &experimental.CheckpointContainerOptions{
+			CommonOptions: &experimental.CheckpointRestoreOptions{
+				Archive: export,
+				Keep: keep,
+			},
+			LeaveRunning: leaveRunning,
+		},
+	}
+	logrus.Debugf("CheckpointContainerRequest: %v", request)
+	r, err := client.CheckpointContainer(context.Background(), request)
+	logrus.Debugf("CheckpointContainerResponse: %v", r)
+	if err != nil {
+		return err
+	}
+	fmt.Println(ID)
+	return nil
+}
+
+// RestoreContainer sends a RestoreContainerRequest to the server
+func RestoreContainer(client experimental.RuntimeServiceClient, ID string, podID string, archive string) error {
+	if ID == "" && archive == "" {
+		return fmt.Errorf("ID cannot be empty")
+	}
+	request := &experimental.RestoreContainerRequest{
+		Id:  ID,
+		Options: &experimental.RestoreContainerOptions{
+			PodSandboxId: podID,
+			CommonOptions: &experimental.CheckpointRestoreOptions{
+				Archive: archive,
+			},
+		},
+	}
+	logrus.Debugf("RestoreContainerRequest: %v", request)
+	r, err := client.RestoreContainer(context.Background(), request)
+	logrus.Debugf("RestoreContainerResponse: %v", r)
+	if err != nil {
+		return err
+	}
+	fmt.Println(r.Id)
 	return nil
 }
 
