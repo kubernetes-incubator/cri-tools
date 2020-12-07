@@ -37,7 +37,6 @@ import (
 
 const (
 	nginxContainerImage string = "nginx:1.18"
-	localhost           string = "localhost/"
 	noNewPrivsImage     string = "gcr.io/kubernetes-e2e-test-images/nonewprivs:1.1"
 )
 
@@ -587,34 +586,33 @@ var _ = framework.KubeDescribe("Security Context", func() {
 
 		It("should support seccomp unconfined on the container", func() {
 			var containerID string
-			seccompProfile := "unconfined"
 
 			By("create seccomp sandbox and container")
-			podID, containerID = seccompTestContainer(rc, ic, seccompProfile)
+			podID, containerID = seccompTestContainer(
+				rc, ic,
+				&runtimeapi.SecurityProfile{
+					ProfileType: runtimeapi.SecurityProfile_Unconfined,
+				},
+			)
 
 			By("verify seccomp profile")
 			verifySeccomp(rc, containerID, []string{"grep", "ecc", "/proc/self/status"}, false, "0") // seccomp disabled
 		})
 
-		It("should support seccomp localhost/profile on the container", func() {
+		It("should support seccomp localhost profile on the container", func() {
 			var containerID string
 
 			By("create seccomp sandbox and container")
-			podID, containerID = seccompTestContainer(rc, ic, localhost+blockchmodProfilePath)
+			podID, containerID = seccompTestContainer(
+				rc, ic,
+				&runtimeapi.SecurityProfile{
+					ProfileType:  runtimeapi.SecurityProfile_Localhost,
+					LocalhostRef: blockchmodProfilePath,
+				},
+			)
 
 			By("verify seccomp profile")
 			verifySeccomp(rc, containerID, []string{"chmod", "400", "/"}, true, "Operation not permitted") // seccomp denied
-		})
-
-		It("should support seccomp default which is unconfined on the container", func() {
-			var containerID string
-			seccompProfile := ""
-
-			By("create seccomp sandbox and container")
-			podID, containerID = seccompTestContainer(rc, ic, seccompProfile)
-
-			By("verify seccomp profile")
-			verifySeccomp(rc, containerID, []string{"grep", "ecc", "/proc/self/status"}, false, "0") // seccomp disabled
 		})
 
 		// SYS_ADMIN capability allows sethostname, and seccomp is unconfined. sethostname should work.
@@ -626,7 +624,10 @@ var _ = framework.KubeDescribe("Security Context", func() {
 			By("create container with seccompBlockHostNameProfile and test")
 			containerID := createSeccompContainer(rc, ic, podID, podConfig,
 				"container-with-block-hostname-seccomp-profile-test-",
-				"unconfined", sysAdminCap, privileged, expectContainerCreateToPass)
+				&runtimeapi.SecurityProfile{
+					ProfileType: runtimeapi.SecurityProfile_Unconfined,
+				},
+				sysAdminCap, privileged, expectContainerCreateToPass)
 			startContainer(rc, containerID)
 			Eventually(func() runtimeapi.ContainerState {
 				return getContainerStatus(rc, containerID).State
@@ -643,23 +644,16 @@ var _ = framework.KubeDescribe("Security Context", func() {
 			By("create container with seccompBlockHostNameProfile and test")
 			containerID := createSeccompContainer(rc, ic, podID, podConfig,
 				"container-with-block-hostname-seccomp-profile-test-",
-				localhost+blockHostNameProfilePath, sysAdminCap, privileged, expectContainerCreateToPass)
+				&runtimeapi.SecurityProfile{
+					ProfileType:  runtimeapi.SecurityProfile_Localhost,
+					LocalhostRef: blockHostNameProfilePath,
+				},
+				sysAdminCap, privileged, expectContainerCreateToPass)
 			startContainer(rc, containerID)
 			Eventually(func() runtimeapi.ContainerState {
 				return getContainerStatus(rc, containerID).State
 			}, time.Minute, time.Second*4).Should(Equal(runtimeapi.ContainerState_CONTAINER_RUNNING))
 			checkSetHostname(rc, containerID, false)
-		})
-
-		It("runtime should not support a custom seccomp profile without using localhost/ as a prefix", func() {
-			privileged := false
-			expectContainerCreateToPass := false
-			By("create pod")
-			podID, podConfig = framework.CreatePodSandboxForContainer(rc)
-			By("create container with seccompBlockHostNameProfile and test")
-			_ = createSeccompContainer(rc, ic, podID, podConfig,
-				"container-with-block-hostname-seccomp-profile-test-",
-				blockHostNameProfilePath, nil, privileged, expectContainerCreateToPass)
 		})
 
 		It("runtime should ignore a seccomp profile that blocks setting hostname when privileged", func() {
@@ -670,7 +664,11 @@ var _ = framework.KubeDescribe("Security Context", func() {
 			By("create privileged container with seccompBlockHostNameProfile and test")
 			containerID := createSeccompContainer(rc, ic, podID, podConfig,
 				"container-with-block-hostname-seccomp-profile-test-",
-				localhost+blockHostNameProfilePath, nil, privileged, expectContainerCreateToPass)
+				&runtimeapi.SecurityProfile{
+					ProfileType:  runtimeapi.SecurityProfile_Localhost,
+					LocalhostRef: blockHostNameProfilePath,
+				},
+				nil, privileged, expectContainerCreateToPass)
 			startContainer(rc, containerID)
 			Eventually(func() runtimeapi.ContainerState {
 				return getContainerStatus(rc, containerID).State
@@ -678,26 +676,33 @@ var _ = framework.KubeDescribe("Security Context", func() {
 			checkSetHostname(rc, containerID, true)
 		})
 
-		Context("docker/default", func() {
-			It("should support seccomp docker/default on the container", func() {
+		Context("RuntimeDefault", func() {
+			It("should support seccomp RuntimeDefault on the container", func() {
 				var containerID string
-				seccompProfile := "docker/default"
 
 				By("create seccomp sandbox and container")
-				podID, containerID = seccompTestContainer(rc, ic, seccompProfile)
+				podID, containerID = seccompTestContainer(rc, ic,
+					&runtimeapi.SecurityProfile{
+						ProfileType: runtimeapi.SecurityProfile_RuntimeDefault,
+					},
+				)
 
 				By("verify seccomp profile")
 				verifySeccomp(rc, containerID, []string{"grep", "ecc", "/proc/self/status"}, false, "2") // seccomp filtered
 			})
 
-			It("runtime should support setting hostname with docker/default seccomp profile and SYS_ADMIN", func() {
+			It("runtime should support setting hostname with RuntimeDefault seccomp profile and SYS_ADMIN", func() {
 				privileged := false
 				expectContainerCreateToPass := true
 				By("create pod")
 				podID, podConfig = framework.CreatePodSandboxForContainer(rc)
-				By("create container with docker/default seccomp profile and test")
+				By("create container with RuntimeDefault seccomp profile and test")
 				containerID := createSeccompContainer(rc, ic, podID, podConfig,
-					"container-with-dockerdefault-seccomp-profile-test-", "docker/default", sysAdminCap, privileged, expectContainerCreateToPass)
+					"container-with-runtimedefault-seccomp-profile-test-",
+					&runtimeapi.SecurityProfile{
+						ProfileType: runtimeapi.SecurityProfile_RuntimeDefault,
+					},
+					sysAdminCap, privileged, expectContainerCreateToPass)
 				startContainer(rc, containerID)
 				Eventually(func() runtimeapi.ContainerState {
 					return getContainerStatus(rc, containerID).State
@@ -705,14 +710,18 @@ var _ = framework.KubeDescribe("Security Context", func() {
 				checkSetHostname(rc, containerID, true)
 			})
 
-			It("runtime should block sethostname with docker/default seccomp profile and no extra caps", func() {
+			It("runtime should block sethostname with RuntimeDefault seccomp profile and no extra caps", func() {
 				privileged := false
 				expectContainerCreateToPass := true
 				By("create pod")
 				podID, podConfig = framework.CreatePodSandboxForContainer(rc)
-				By("create container with docker/default seccomp profile and test")
+				By("create container with RuntimeDefault seccomp profile and test")
 				containerID := createSeccompContainer(rc, ic, podID, podConfig,
-					"container-with-dockerdefault-seccomp-profile-test-", "docker/default", nil, privileged, expectContainerCreateToPass)
+					"container-with-runtimedefault-seccomp-profile-test-",
+					&runtimeapi.SecurityProfile{
+						ProfileType: runtimeapi.SecurityProfile_RuntimeDefault,
+					},
+					nil, privileged, expectContainerCreateToPass)
 				startContainer(rc, containerID)
 				Eventually(func() runtimeapi.ContainerState {
 					return getContainerStatus(rc, containerID).State
@@ -1069,7 +1078,7 @@ func createSeccompProfile(profileContents string, profileName string, hostPath s
 }
 
 // seccompTestContainer creates and starts a seccomp sandbox and a container.
-func seccompTestContainer(rc internalapi.RuntimeService, ic internalapi.ImageManagerService, seccompProfile string) (string, string) {
+func seccompTestContainer(rc internalapi.RuntimeService, ic internalapi.ImageManagerService, seccomp *runtimeapi.SecurityProfile) (string, string) {
 	By("create seccomp sandbox")
 	podSandboxName := "seccomp-sandbox-" + framework.NewUUID()
 	uid := framework.DefaultUIDPrefix + framework.NewUUID()
@@ -1078,7 +1087,7 @@ func seccompTestContainer(rc internalapi.RuntimeService, ic internalapi.ImageMan
 		Metadata: framework.BuildPodSandboxMetadata(podSandboxName, uid, namespace, framework.DefaultAttempt),
 		Linux: &runtimeapi.LinuxPodSandboxConfig{
 			SecurityContext: &runtimeapi.LinuxSandboxSecurityContext{
-				SeccompProfilePath: seccompProfile,
+				Seccomp: seccomp,
 			},
 		},
 		Labels: framework.DefaultPodLabels,
@@ -1086,7 +1095,11 @@ func seccompTestContainer(rc internalapi.RuntimeService, ic internalapi.ImageMan
 	podID := framework.RunPodSandbox(rc, podConfig)
 
 	By("create container")
-	containerNamePrefix := fmt.Sprintf("seccomp-container-%s-%s", strings.Replace(seccompProfile, "/", "-", -1), framework.NewUUID())
+	containerNamePrefix := fmt.Sprintf(
+		"seccomp-container-%s-%s",
+		strings.ToLower(seccomp.GetProfileType().String()),
+		framework.NewUUID(),
+	)
 	containerName := containerNamePrefix + framework.NewUUID()
 	containerConfig := &runtimeapi.ContainerConfig{
 		Metadata: framework.BuildContainerMetadata(containerName, framework.DefaultAttempt),
@@ -1094,7 +1107,7 @@ func seccompTestContainer(rc internalapi.RuntimeService, ic internalapi.ImageMan
 		Command:  pauseCmd,
 		Linux: &runtimeapi.LinuxContainerConfig{
 			SecurityContext: &runtimeapi.LinuxContainerSecurityContext{
-				SeccompProfilePath: seccompProfile,
+				Seccomp: seccomp,
 			},
 		},
 	}
@@ -1128,11 +1141,11 @@ func createSeccompContainer(rc internalapi.RuntimeService,
 	podID string,
 	podConfig *runtimeapi.PodSandboxConfig,
 	prefix string,
-	profile string,
+	profile *runtimeapi.SecurityProfile,
 	caps []string,
 	privileged bool,
 	expectContainerCreateToPass bool) string {
-	By("create " + profile + " Seccomp container")
+	By("create " + profile.GetProfileType().String() + " Seccomp container")
 	containerName := prefix + framework.NewUUID()
 	containerConfig := &runtimeapi.ContainerConfig{
 		Metadata: framework.BuildContainerMetadata(containerName, framework.DefaultAttempt),
@@ -1144,7 +1157,7 @@ func createSeccompContainer(rc internalapi.RuntimeService,
 				Capabilities: &runtimeapi.Capability{
 					AddCapabilities: caps,
 				},
-				SeccompProfilePath: profile,
+				Seccomp: profile,
 			},
 		},
 	}
