@@ -20,7 +20,7 @@ import (
 	"runtime"
 
 	"github.com/kubernetes-sigs/cri-tools/pkg/framework"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // Container test constants

@@ -31,7 +31,7 @@ import (
 	"golang.org/x/net/context"
 
 	errorUtils "k8s.io/apimachinery/pkg/util/errors"
-	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	pb "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 type sandboxByCreated []*pb.PodSandbox

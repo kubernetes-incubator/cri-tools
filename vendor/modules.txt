@@ -24,6 +24,7 @@ github.com/docker/go-units
 github.com/docker/spdystream
 github.com/docker/spdystream/spdy
 # github.com/fsnotify/fsnotify v1.4.9
+## explicit
 github.com/fsnotify/fsnotify
 # github.com/go-logr/logr v0.2.0
 github.com/go-logr/logr
@@ -441,12 +442,12 @@ k8s.io/client-go/util/flowcontrol
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/workqueue
 # k8s.io/component-base v0.0.0 => k8s.io/kubernetes/staging/src/k8s.io/component-base v0.0.0-20201204214525-af46c47ce925
+## explicit
 k8s.io/component-base/featuregate
 k8s.io/component-base/logs/logreduction
 # k8s.io/cri-api v0.0.0 => k8s.io/kubernetes/staging/src/k8s.io/cri-api v0.0.0-20201204214525-af46c47ce925
 ## explicit
-k8s.io/cri-api/pkg/apis
-k8s.io/cri-api/pkg/apis/runtime/v1alpha2
+k8s.io/cri-api/pkg/apis/runtime/v1
 # k8s.io/klog/v2 v2.4.0
 k8s.io/klog/v2
 # k8s.io/kubectl v0.0.0 => k8s.io/kubernetes/staging/src/k8s.io/kubectl v0.0.0-20201204214525-af46c47ce925
@@ -459,9 +460,7 @@ k8s.io/kubernetes/pkg/api/v1/pod
 k8s.io/kubernetes/pkg/apis/core
 k8s.io/kubernetes/pkg/apis/scheduling
 k8s.io/kubernetes/pkg/features
-k8s.io/kubernetes/pkg/kubelet/cri/remote
 k8s.io/kubernetes/pkg/kubelet/cri/remote/util
-k8s.io/kubernetes/pkg/kubelet/kuberuntime/logs
 k8s.io/kubernetes/pkg/kubelet/types
 k8s.io/kubernetes/pkg/kubelet/util
 k8s.io/kubernetes/pkg/kubelet/util/ioutils
@@ -470,6 +469,7 @@ k8s.io/kubernetes/pkg/probe/exec
 k8s.io/kubernetes/pkg/security/apparmor
 k8s.io/kubernetes/pkg/util/tail
 # k8s.io/utils v0.0.0-20201110183641-67b214c5f920
+## explicit
 k8s.io/utils/exec
 k8s.io/utils/integer
 k8s.io/utils/path

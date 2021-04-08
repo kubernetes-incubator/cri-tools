@@ -19,9 +19,9 @@ package benchmark
 import (
 	"runtime"
 
+	internalapi "github.com/kubernetes-sigs/cri-tools/pkg/cri"
 	"github.com/kubernetes-sigs/cri-tools/pkg/framework"
-	internalapi "k8s.io/cri-api/pkg/apis"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

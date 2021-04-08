@@ -23,10 +23,10 @@ import (
 	"os/exec"
 	"time"
 
+	internalapi "github.com/kubernetes-sigs/cri-tools/pkg/cri"
 	"github.com/kubernetes-sigs/cri-tools/pkg/framework"
 	"github.com/pkg/errors"
-	internalapi "k8s.io/cri-api/pkg/apis"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/kubernetes/pkg/security/apparmor"
 
 	"github.com/golang/glog"

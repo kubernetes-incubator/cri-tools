@@ -23,11 +23,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/net/context"
-	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	pb "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 const (
-	criClientVersion = "v1alpha2"
+	criClientVersion = "v1"
 )
 
 var runtimeVersionCommand = &cli.Command{

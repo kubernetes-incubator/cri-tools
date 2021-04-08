@@ -30,11 +30,11 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"k8s.io/klog/v2"
+	"github.com/sirupsen/logrus"
 
-	"k8s.io/api/core/v1"
-	internalapi "k8s.io/cri-api/pkg/apis"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	internalapi "github.com/kubernetes-sigs/cri-tools/pkg/cri"
+	v1 "k8s.io/api/core/v1"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/kubernetes/pkg/kubelet/types"
 	"k8s.io/kubernetes/pkg/util/tail"
 )
@@ -314,7 +314,7 @@ func ReadLogs(ctx context.Context, path, containerID string, opts *LogOptions, r
 	msg := &logMessage{}
 	for {
 		if stop {
-			klog.V(2).Infof("Finish parsing log file %q", path)
+			logrus.Infof("Finish parsing log file %q", path)
 			return nil
 		}
 		l, err := r.ReadBytes(eol[0])
@@ -361,7 +361,7 @@ func ReadLogs(ctx context.Context, path, containerID string, opts *LogOptions, r
 					}
 					f.Close()
 					if err := watcher.Remove(f.Name()); err != nil && !os.IsNotExist(err) {
-						klog.Errorf("failed to remove file watch %q: %v", f.Name(), err)
+						logrus.Errorf("failed to remove file watch %q: %v", f.Name(), err)
 					}
 					f = newF
 					if err := watcher.Add(f.Name()); err != nil {
@@ -377,7 +377,7 @@ func ReadLogs(ctx context.Context, path, containerID string, opts *LogOptions, r
 			if len(l) == 0 {
 				continue
 			}
-			klog.Warningf("Incomplete line in log file %q: %q", path, l)
+			logrus.Warnf("Incomplete line in log file %q: %q", path, l)
 		}
 		if parse == nil {
 			// Initialize the log parsing function.
@@ -389,16 +389,16 @@ func ReadLogs(ctx context.Context, path, containerID string, opts *LogOptions, r
 		// Parse the log line.
 		msg.reset()
 		if err := parse(l, msg); err != nil {
-			klog.Errorf("Failed with err %v when parsing log for log file %q: %q", err, path, l)
+			logrus.Errorf("Failed with err %v when parsing log for log file %q: %q", err, path, l)
 			continue
 		}
 		// Write the log line into the stream.
 		if err := writer.write(msg); err != nil {
 			if err == errMaximumWrite {
-				klog.V(2).Infof("Finish parsing log file %q, hit bytes limit %d(bytes)", path, opts.bytes)
+				logrus.Infof("Finish parsing log file %q, hit bytes limit %d(bytes)", path, opts.bytes)
 				return nil
 			}
-			klog.Errorf("Failed with err %v when writing log for log file %q: %+v", err, path, msg)
+			logrus.Errorf("Failed with err %v when writing log for log file %q: %+v", err, path, msg)
 			return err
 		}
 	}
@@ -411,7 +411,7 @@ func isContainerRunning(id string, r internalapi.RuntimeService) (bool, error) {
 	}
 	// Only keep following container log when it is running.
 	if s.State != runtimeapi.ContainerState_CONTAINER_RUNNING {
-		klog.V(5).Infof("Container %q is not running (state=%q)", id, s.State)
+		logrus.Infof("Container %q is not running (state=%q)", id, s.State)
 		// Do not return error because it's normal that the container stops
 		// during waiting.
 		return false, nil
@@ -445,10 +445,10 @@ func waitLogs(ctx context.Context, id string, w *fsnotify.Watcher, runtimeServic
 			case fsnotify.Chmod:
 				return true, true, nil
 			default:
-				klog.Errorf("Unexpected fsnotify event: %v, retrying...", e)
+				logrus.Errorf("Unexpected fsnotify event: %v, retrying...", e)
 			}
 		case err := <-w.Errors:
-			klog.Errorf("Fsnotify watch error: %v, %d error retries remaining", err, errRetry)
+			logrus.Errorf("Fsnotify watch error: %v, %d error retries remaining", err, errRetry)
 			if errRetry == 0 {
 				return false, false, err
 			}

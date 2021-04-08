@@ -34,7 +34,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
-	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	pb "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"sigs.k8s.io/yaml"
 )
 

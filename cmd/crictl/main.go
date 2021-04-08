@@ -28,8 +28,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	internalapi "k8s.io/cri-api/pkg/apis"
-	"k8s.io/kubernetes/pkg/kubelet/cri/remote"
+	internalapi "github.com/kubernetes-sigs/cri-tools/pkg/cri"
+	"github.com/kubernetes-sigs/cri-tools/pkg/cri/remote"
 	"k8s.io/kubernetes/pkg/kubelet/util"
 
 	"github.com/kubernetes-sigs/cri-tools/pkg/common"

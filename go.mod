@@ -6,6 +6,7 @@ require (
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.0-beta1.0.20201108103107-c7109494fe65+incompatible
 	github.com/docker/go-units v0.4.0
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.4.3
 	github.com/onsi/ginkgo v1.14.2
@@ -23,9 +24,11 @@ require (
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.0+incompatible
+	k8s.io/component-base v0.0.0
 	k8s.io/cri-api v0.0.0
 	k8s.io/kubectl v0.0.0
 	k8s.io/kubernetes v0.0.0
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	sigs.k8s.io/yaml v1.2.0
 )
 

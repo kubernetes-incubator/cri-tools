@@ -27,7 +27,7 @@ import (
 	"golang.org/x/net/context"
 	restclient "k8s.io/client-go/rest"
 	remoteclient "k8s.io/client-go/tools/remotecommand"
-	pb "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	pb "k8s.io/cri-api/pkg/apis/runtime/v1"
 	"k8s.io/kubectl/pkg/util/term"
 )
 

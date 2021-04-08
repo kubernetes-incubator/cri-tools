@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2020 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ limitations under the License.
 // To regenerate api.pb.go run hack/update-generated-runtime.sh
 syntax = "proto3";
 
-package runtime.v1alpha2;
-option go_package = "v1alpha2";
+package runtime.v1;
+option go_package = "v1";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
@@ -66,7 +66,8 @@ service RuntimeService {
     // StopContainer stops a running container with a grace period (i.e., timeout).
     // This call is idempotent, and must not return an error if the container has
     // already been stopped.
-    // TODO: what must the runtime do after the grace period is reached?
+    // The runtime must forcibly kill the container after the grace period is
+    // reached.
     rpc StopContainer(StopContainerRequest) returns (StopContainerResponse) {}
     // RemoveContainer removes the container. If the container is running, the
     // container must be forcibly removed.
@@ -361,11 +362,6 @@ message PodSandboxConfig {
     // E.g.,
     //     PodSandboxConfig.LogDirectory = `/var/log/pods/<podUID>/`
     //     ContainerConfig.LogPath = `containerName/Instance#.log`
-    //
-    // WARNING: Log management and how kubelet should interface with the
-    // container logs are under active discussion in
-    // https://issues.k8s.io/24677. There *may* be future change of direction
-    // for logging as the discussion carries on.
     string log_directory = 3;
     // DNS config for the sandbox.
     DNSConfig dns_config = 4;
@@ -401,7 +397,7 @@ message RunPodSandboxRequest {
     // If the runtime handler is unknown, this request should be rejected.  An
     // empty string should select the default handler, equivalent to the
     // behavior before this feature was added.
-    // See https://git.k8s.io/enhancements/keps/sig-node/runtime-class.md
+    // See https://git.k8s.io/enhancements/keps/sig-node/585-runtime-class/README.md
     string runtime_handler = 2;
 }
 
@@ -564,8 +560,6 @@ message KeyValue {
 
 // LinuxContainerResources specifies Linux specific configuration for
 // resources.
-// TODO: Consider using Resources from opencontainers/runtime-spec/specs-go
-// directly.
 message LinuxContainerResources {
     // CPU CFS (Completely Fair Scheduler) period. Default: 0 (not specified).
     int64 cpu_period = 1;
@@ -805,8 +799,6 @@ message ContainerConfig {
 
     // Variables for interactive containers, these have very specialized
     // use-cases (e.g. debugging).
-    // TODO: Determine if we need to continue supporting these fields that are
-    // part of Kubernetes's Container Spec.
     bool stdin = 12;
     bool stdin_once = 13;
     bool tty = 14;
@@ -984,10 +976,10 @@ message UpdateContainerResourcesRequest {
     string container_id = 1;
     // Resource configuration specific to Linux containers.
     LinuxContainerResources linux = 2;
-    // Resource configuration specific to Windows containers. 
+    // Resource configuration specific to Windows containers.
     WindowsContainerResources windows = 3;
-    // Unstructured key-value map holding arbitrary additional information for 
-    // container resources updating. This can be used for specifying experimental 
+    // Unstructured key-value map holding arbitrary additional information for
+    // container resources updating. This can be used for specifying experimental
     // resources to update or other options to use when updating the container.
     map<string, string> annotations = 4;
 }
