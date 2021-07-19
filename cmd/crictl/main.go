@@ -175,6 +175,8 @@ func main() {
 		configCommand,
 		statsCommand,
 		completionCommand,
+		checkpointContainerCommand,
+		restoreContainerCommand,
 	}
 
 	runtimeEndpointUsage := fmt.Sprintf("Endpoint of CRI container runtime "+
