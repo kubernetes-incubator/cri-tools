@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	goruntime "runtime"
 	"sort"
 	"strings"
 	"time"
@@ -210,6 +211,14 @@ var updateContainerCommand = &cli.Command{
 	ArgsUsage: "CONTAINER-ID [CONTAINER-ID...]",
 	Flags: []cli.Flag{
 		&cli.Int64Flag{
+			Name:  "cpu-count",
+			Usage: "(Windows only) Number of CPUs available to the container",
+		},
+		&cli.Int64Flag{
+			Name:  "cpu-maximum",
+			Usage: "(Windows only) Portion of CPU cycles specified as a percentage * 100",
+		},
+		&cli.Int64Flag{
 			Name:  "cpu-period",
 			Usage: "CPU CFS period to be used for hardcapping (in usecs). 0 to use system default",
 		},
@@ -245,6 +254,7 @@ var updateContainerCommand = &cli.Command{
 		defer closeConnection(context, runtimeConn)
 
 		options := updateOptions{
+			CPUMaximum:         context.Int64("cpu-maximum"),
 			CPUPeriod:          context.Int64("cpu-period"),
 			CPUQuota:           context.Int64("cpu-quota"),
 			CPUShares:          context.Int64("cpu-share"),
@@ -698,6 +708,10 @@ func StartContainer(client pb.RuntimeServiceClient, ID string) error {
 }
 
 type updateOptions struct {
+	// (Windows only) Number of CPUs available to the container.
+	CPUCount int64
+	// (Windows only) Portion of CPU cycles specified as a percentage * 100.
+	CPUMaximum int64
 	// CPU CFS (Completely Fair Scheduler) period. Default: 0 (not specified).
 	CPUPeriod int64
 	// CPU CFS (Completely Fair Scheduler) quota. Default: 0 (not specified).
@@ -722,7 +736,9 @@ func UpdateContainerResources(client pb.RuntimeServiceClient, ID string, opts up
 	}
 	request := &pb.UpdateContainerResourcesRequest{
 		ContainerId: ID,
-		Linux: &pb.LinuxContainerResources{
+	}
+	if goruntime.GOOS != "windows" {
+		request.Linux = &pb.LinuxContainerResources{
 			CpuPeriod:          opts.CPUPeriod,
 			CpuQuota:           opts.CPUQuota,
 			CpuShares:          opts.CPUShares,
@@ -730,7 +746,14 @@ func UpdateContainerResources(client pb.RuntimeServiceClient, ID string, opts up
 			CpusetMems:         opts.CpusetMems,
 			MemoryLimitInBytes: opts.MemoryLimitInBytes,
 			OomScoreAdj:        opts.OomScoreAdj,
-		},
+		}
+	} else {
+		request.Windows = &pb.WindowsContainerResources{
+			CpuCount:           opts.CPUCount,
+			CpuMaximum:         opts.CPUMaximum,
+			CpuShares:          opts.CPUShares,
+			MemoryLimitInBytes: opts.MemoryLimitInBytes,
+		}
 	}
 	logrus.Debugf("UpdateContainerResourcesRequest: %v", request)
 	r, err := client.UpdateContainerResources(context.Background(), request)
